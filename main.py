@@ -5,13 +5,13 @@ from io import BytesIO
 
 import sys
 import os
-sys.path.append(os.path.abspath("/Users/gregtordjman/dev/github/vinci-portal-back/submodules"))
-sys.path.append(os.path.abspath("/Users/gregtordjman/dev/github/vinci-portal-back/submodules/data_gov"))
-sys.path.append(os.path.abspath("/Users/gregtordjman/dev/github/vinci-portal-back/submodules/data_gov/submodules/airports_finances/finance"))
 
-from submodules.data_gov.finance_file import FinanceFile
-from submodules.data_gov.ingestion.process import process_file
-from submodules.data_gov.types import AssetTypes, FileStepStatus
+sys.path.append(os.path.abspath("airports_finances"))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from data_gov.finance_file import FinanceFile
+from data_gov.ingestion.process import process_file
+from data_gov.types import AssetTypes, FileStepStatus
 
 def test_local_file_to_uploadfile(file_path: str) -> UploadFile:
     # Read the file from the local path
@@ -50,7 +50,7 @@ async def test_file(file_path: str):
     print(finance_file.status)
     
 def main():
-    file_path = "/Users/gregtordjman/dev/github/vinci-portal-back/submodules/data_gov/test.txt"
+    file_path = "test_files/LGW_FINANCE_DEPOSITS_2024-08-31 (1).csv"
     asyncio.run(test_file(file_path))
 
 if __name__ == "__main__":
