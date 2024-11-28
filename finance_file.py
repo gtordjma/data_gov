@@ -44,7 +44,7 @@ class FinanceFile:
             mime = validate_mime_type(self.file)
             running_date = f"{self.year}-{self.month}-{get_last_day(self.month, self.year)}"
             file_name = f"{self.file_asset.value}_FINANCE_{self.file_type_enum.value}_{running_date}.{mime}"
-            file_path = Path("/tmp") / file_name
+            file_path = Path("saved_file_local") / file_name
             with open(file_path, "wb") as buffer:
                 content = await self.file.read()
                 buffer.write(content)
