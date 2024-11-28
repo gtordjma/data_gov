@@ -1,4 +1,5 @@
 import asyncio
+import pprint
 from fastapi import UploadFile
 from pathlib import Path
 from io import BytesIO
@@ -34,10 +35,10 @@ def test_local_file_to_uploadfile(file_path: str) -> UploadFile:
 
 async def test_file(file_path: str):
     upload_file = test_local_file_to_uploadfile(file_path)
-    
+    file_asset: AssetTypes = AssetTypes.LGW
     finance_file = FinanceFile(
         file=upload_file, # UploadFile
-        file_asset=AssetTypes.LGW, # ex: LGW
+        file_asset=file_asset, # ex: LGW
         file_type="DEPOSITS", # ex: DEPOSITS
         year="2024", # ex: 2024
         month="08", # ex: 08
@@ -45,9 +46,11 @@ async def test_file(file_path: str):
     )
     file_name, running_date, file_path = await finance_file.save_file_to_tmp_folder()
     kpis, parquet_file_path = process_file(file_name, running_date, file_path)
-    print("kpis, parquet_file_path", kpis, parquet_file_path)
+    pprint.pprint(kpis)
+    print("parquet_file_path", parquet_file_path)
     finance_file.update_status("checkKpis", FileStepStatus.RUNNING)
     print(finance_file.status)
+    
     
 def main():
     file_path = "test_files/LGW_FINANCE_DEPOSITS_2024-08-31 (1).csv"
