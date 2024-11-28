@@ -7,8 +7,8 @@ from data_gov.ingestion.check_file import validate_filename_type, validate_mime_
 from data_gov.ingestion.utils import get_last_day
 
 
-from .types import AssetTypes, FileStepStatus, Versions
-from .error import DataGouvException
+from data_gov.types import AssetTypes, FileStepStatus, Versions
+from data_gov.error import DataGouvException
 
 
 class FinanceFile:
@@ -49,11 +49,15 @@ class FinanceFile:
                 content = await self.file.read()
                 buffer.write(content)
             return file_name, running_date, file_path
+        except DataGouvException as e:
+            print(e)
+            raise e
         except Exception as e:
             raise DataGouvException(
                 title="Internal Error",
                 description="Internal error: saving the tmp file has failed. Please contact support."
             )
+            
             
     def update_status(self, k, v):
         self.status[k] = v
