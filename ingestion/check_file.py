@@ -1,4 +1,5 @@
 from enum import Enum
+import mimetypes
 from typing import Optional
 
 from fastapi import UploadFile
@@ -64,9 +65,11 @@ def validate_asset(filename: str) -> Optional[AssetTypes]:
                 return valeur
     return None
 
-async def validate_mime_type(file: UploadFile):
-    mime_type = file.content_type
-    
+def validate_mime_type(file: UploadFile):
+    mime_type, _ = mimetypes.guess_type(file.filename)
+    if mime_type is None:
+        mime_type = "application/octet-stream" 
+        
     if mime_type == "text/csv":
         return "csv"
     elif mime_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":

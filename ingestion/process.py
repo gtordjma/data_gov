@@ -10,12 +10,12 @@ from data_gov.error import DataGouvException
 from data_gov.ingestion.utils import copy_to_directories, load_yaml, split_name
 from data_gov.types import AssetTypes
 from data_gov.kpis import kpis_function_tab
-from data_gov.finance.scripts.ProcessingFunction import processing_function
+from data_gov.airports_finances.finance.scripts.ProcessingFunction import processing_function
 
 def get_special_function_name(file_type: Enum, asset_type: AssetTypes) -> None:
     try:
         print(f"Traitement du fichier contenant '{file_type.value}' pour l'actif '{asset_type.value}'.")
-        config_file = load_yaml("parameters.yaml", encoding="utf-8")
+        config_file = load_yaml(config_path="airports_finances/finance/conf/parameters.yaml")
 
         search = config_file["assets"][asset_type.value]["source"]
 
@@ -28,7 +28,7 @@ def get_special_function_name(file_type: Enum, asset_type: AssetTypes) -> None:
             description=f"Des erreurs ont été détectées lors de la recupération de la fonction pour l'asset {asset_type.value} et le type {file_type.value}.\nErreur détaillé: {str(e)}"
         )
         
-def load_dataset(filepath: UploadFile | str, func_name: str, file_type: Enum, asset_type: AssetTypes) -> pd.DataFrame:
+def load_dataset(filepath: UploadFile | str, func_name: str, file_type: str, asset_type: AssetTypes) -> pd.DataFrame:
     try:
         print("load_dataset filepath", filepath)
         parts = func_name.split('_')
@@ -40,7 +40,7 @@ def load_dataset(filepath: UploadFile | str, func_name: str, file_type: Enum, as
         module_path = f'assets.{first_dir}.{sub_dir}.read'
 
         read_module = importlib.import_module(module_path)
-
+        print(read_module)
         read_function = getattr(read_module, 'read')
 
         df = read_function(filepath)
@@ -48,7 +48,7 @@ def load_dataset(filepath: UploadFile | str, func_name: str, file_type: Enum, as
     except Exception as e:
         raise DataGouvException(
             title="Load Dataset Error",
-            description=f"Le fichier envoyé ne correspond pas pour l'asset {asset_type.value} et le type {file_type.value}.\nErreur détaillé: {str(e)}"
+            description=f"Le fichier envoyé ne correspond pas pour l'asset {asset_type.value} et le type {file_type}.\nErreur détaillé: {str(e)}"
         )
 
 def get_schema_module(file_asset: AssetTypes, file_type: str):

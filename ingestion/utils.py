@@ -9,9 +9,9 @@ import uuid
 import yaml
 
 from data_gov.model import ConfigSchema, FinanceSpecialFunctionScript
-from submodules.data_gov.error import DataGouvException
-from submodules.data_gov.types import AssetTypes, ParquetFile
-from submodules.dash.submodules.airports_finances.finance.scripts.utils.Consts import DATA_FOLDER
+from data_gov.error import DataGouvException
+from data_gov.types import AssetTypes, ParquetFile
+from data_gov.airports_finances.finance.scripts.utils.Consts import DATA_FOLDER
 
 
 def get_last_day(mois: str, annee: str) -> str:
@@ -34,11 +34,34 @@ def get_last_day(mois: str, annee: str) -> str:
     except ValueError as e:
         return f"Erreur : {e}"
     
-def load_yaml(config_path: Path, **kwargs) -> ConfigSchema | FinanceSpecialFunctionScript:
-    relative_path = Path(__file__).parent / config_path
-    with open(relative_path, "r", encoding=kwargs.get("encoding")) as f:
-        config_file = yaml.safe_load(f)
-    return config_file
+def load_yaml(config_path: str, base_path: str = None, **kwargs) -> dict:
+    """
+    Charge un fichier YAML et retourne son contenu.
+
+    Args:
+        config_path (str): Chemin relatif du fichier YAML à partir de base_path ou utils.py si non spécifié.
+        base_path (str): Chemin de base pour résoudre le fichier YAML. Par défaut, le répertoire parent de `utils.py`.
+        **kwargs: Options supplémentaires, comme `encoding`.
+
+    Returns:
+        dict: Contenu du fichier YAML sous forme de dictionnaire.
+    """
+    if base_path is None:
+        base_path = Path(__file__).resolve().parent.parent  # data_gov racine
+    else:
+        base_path = Path(base_path).resolve()
+    
+    full_path = base_path / config_path
+
+    try:
+        with open(full_path, "r", encoding=kwargs.get("encoding", "utf-8")) as f:
+            config_file = yaml.safe_load(f)
+        return config_file
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"Le fichier de configuration {full_path} est introuvable.") from e
+    except yaml.YAMLError as e:
+        raise ValueError(f"Erreur lors de la lecture du fichier YAML : {full_path}") from e
+
 
 def split_name(name: str):
     parts = name.split('_')
@@ -49,8 +72,8 @@ def split_name(name: str):
     
 def get_params(asset_type: AssetTypes, source_name: str, params: str):
     try:
-        config_file = load_yaml("parameters.yaml", encoding="utf-8")
-
+        config_file = load_yaml(config_path="airports_finances/finance/conf/parameters.yaml")
+        
         search = config_file["assets"][asset_type.value]["source"][source_name]
         return search.get(params)
     except Exception as e:
