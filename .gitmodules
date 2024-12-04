@@ -1,3 +1,4 @@
-[submodule "airports_finances"]
-	path = use_cases/finance/airports_finances
+[submodule "use_cases/finance/submodule"]
+	path = use_cases/finance/submodule
 	url = https://r.vinci-concessions.com/va-hq-sdh/use-cases/finance/finance-airports.git
+	branch = staging
