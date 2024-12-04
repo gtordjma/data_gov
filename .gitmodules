@@ -1,3 +1,3 @@
 [submodule "airports_finances"]
-	path = airports_finances
-	url = https://gitlab.va-sdh-hq-staging.vinci-airports.com/use-cases/finance/airports-finances.git
+	path = use_cases/finance/airports_finances
+	url = https://r.vinci-concessions.com/va-hq-sdh/use-cases/finance/finance-airports.git
