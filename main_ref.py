@@ -15,7 +15,7 @@ import pandas as pd
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from data_gov.shared.types.AssetTypes import AssetTypes
 from data_gov.use_cases.UseCase import UseCase
-from data_gov.use_cases.finance.FinanceRefFile import FinanceRefFile
+from data_gov.use_cases.finance.FinanceRefFile import FinanceRefFile, excel_to_json_data_gov_format
 
 def test_local_file_to_uploadfile(file_path: str) -> UploadFile:
     # Read the file from the local path
@@ -61,9 +61,9 @@ def main():
     # Manque le path pour DL - use FinanceRefFile.get_file_url ??
     #all_json_data_gov_format = excel_to_json_data_gov_format('ref/schema_files_finance.xlsx')
     #specific_asset_json_data_gov_format = excel_to_json_data_gov_format('ref/schema_files_finance.xlsx', AssetTypes.ADL)
-    #pprint.pprint(json_data_gov_format)
+    #pprint.pprint(specific_asset_json_data_gov_format)
     #-----------------------------------------------
-    file_path = f"test_files/{AssetTypes.LGW.value}/REF_CUSTOMERS.csv"
+    file_path = f"test_files/{AssetTypes.LGW.value}/REF_SUPPLIERS.csv"
     upload_file: UploadFile = test_local_file_to_uploadfile(file_path)
     asyncio.run(test_ref_file("finance", upload_file, "LGW", "REF_SUPPLIERS"))
 

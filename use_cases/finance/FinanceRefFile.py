@@ -34,7 +34,7 @@ def excel_to_json_data_gov_format(file_path: str, file_asset: AssetTypes | None 
         
         # Check if the row is valid for inclusion
         if is_ref == 1:
-            if file_asset is None or asset == file_asset:
+            if file_asset is None or asset == file_asset.value:
                 if asset not in grouped_data:
                     grouped_data[asset] = []
                 grouped_data[asset].append({
