@@ -1,22 +1,19 @@
 import asyncio
 import os
-import pprint
 import sys
 from io import BytesIO
 from pathlib import Path
 
 from fastapi import UploadFile
 
-from data_gov.use_cases.UseCase import UseCase
 from data_gov.use_cases.finance.FinanceFile import FinanceFile
 from data_gov.use_cases.finance.FinanceVersions import FinanceVersions
-from data_gov.use_cases.finance.ProcessFinanceFile import process_file
+from data_gov.use_cases.finance.ProcessFinanceFile import check_ref
 
 # sys.path.append(os.path.abspath("airports_finances"))
 # sys.path.append(os.path.abspath('use_cases/finance/submodule'))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from data_gov.shared.types.AssetTypes import AssetTypes
-from data_gov.shared.types.FileStepStatus import FileStepStatus
 
 
 def test_local_file_to_uploadfile(file_path: str) -> UploadFile:
@@ -40,14 +37,13 @@ def test_local_file_to_uploadfile(file_path: str) -> UploadFile:
 
 
 async def test_file(
-        use_case: UseCase,
         file: UploadFile,
         file_asset: AssetTypes,
         file_type: str,
         file_version: FinanceVersions | None,
         year: str,
         month: str,
-            ):
+):
     finance_file = FinanceFile(
         file=file,  # UploadFile
         file_asset=file_asset,  # ex: LGW
@@ -60,10 +56,12 @@ async def test_file(
 
     for file_type_source in finance_file.sources:
         print('Processing : ', file_type_source, file_asset, file_path)
-        kpis, parquet_file_path = process_file(file_name, running_date, file_path, file_type_source, file_asset)
-        pprint.pprint(kpis)
-        finance_file.update_status("checkKpis", FileStepStatus.RUNNING)
-        print(finance_file.status)
+        check_ref_results = check_ref(file_name, file_path, file_type_source, file_asset)
+        print(check_ref_results)
+        # kpis, parquet_file_path = process_file(file_name, running_date, file_path, file_type_source, file_asset)
+        # pprint.pprint(kpis)
+        # finance_file.update_status("checkKpis", FileStepStatus.RUNNING)
+        # print(finance_file.status)
 
 
 def main():
@@ -113,7 +111,7 @@ def main():
         ],
 
         AssetTypes.SCA: [
-            ["BUDGET", "SCA-FINANCE_BUDGET_R2 2024_2024-07-15.xlsx", FinanceVersions.R2],
+            ["BUDGET", "SCA_FINANCE_BUDGET_B0 2025_2024-11-01.csv", FinanceVersions.R2],
             ["CAPEX", "SCA_FINANCE_CAPEX_2024-11-30.xlsx", None],
             ["CPXFORECAST", "SCA_FINANCE_CPXFORECAST_R22024_2024-07-31.xlsx", FinanceVersions.R2],
             ["CUSTOMER", "SCA_FINANCE_CUSTOMER_2024-11-30.xlsx", None],
