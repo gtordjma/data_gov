@@ -101,3 +101,24 @@ def process_file(filename, running_date: str, filepath: str, file_type: FinanceF
             title="Filename Error",
             description=f"Nom de fichier ou type d'actif invalide: {filename}"
         )
+
+
+def check_ref(filename, filepath: str, file_type: FinanceFileTypes, file_asset: AssetTypes):
+    """
+    Processus complet de traitement d'un fichier valide.
+    """
+    try:
+        schema_module = importlib.import_module(
+            f"finance.scripts.assets.{file_asset.value}.{file_type.value.lower()}.check_refs")
+        return schema_module.check_refs(filepath)
+    except ModuleNotFoundError as e:
+        print_exc()
+        return None
+    except AttributeError as e:
+        print_exc()
+        return None
+    except Exception as e:
+        raise DataGouvException(
+            title="Ref Check Function Error",
+            description=f"{str(e)}"
+        )
