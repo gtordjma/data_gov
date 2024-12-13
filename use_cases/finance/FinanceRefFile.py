@@ -7,12 +7,12 @@ from fastapi import UploadFile
 import pandas as pd
 import pandera as pa
 
-from data_gov.shared.CheckFile import validate_file_extension
-from data_gov.shared.DataGouvException import DataGouvException
-from data_gov.shared.types.AssetTypes import AssetTypes
-from data_gov.shared.types.File import File
-from data_gov.shared.types.FileStepStatus import FileStepStatus
-from data_gov.use_cases.UseCase import UseCase
+from ...shared.CheckFile import validate_file_extension
+from ...shared.DataGouvException import DataGouvException
+from ...shared.types.AssetTypes import AssetTypes
+from ...shared.types.File import File
+from ...shared.types.FileStepStatus import FileStepStatus
+from ...use_cases.UseCase import UseCase
 
 
 def excel_to_df(file_path: str, sheet_name: str):

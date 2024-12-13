@@ -13,9 +13,9 @@ import pandas as pd
 #from shared.types.AssetTypes import AssetTypes
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from data_gov.shared.types.AssetTypes import AssetTypes
-from data_gov.use_cases.UseCase import UseCase
-from data_gov.use_cases.finance.FinanceRefFile import FinanceRefFile, excel_to_json_data_gov_format
+from .shared.types.AssetTypes import AssetTypes
+from .use_cases.UseCase import UseCase
+from .use_cases.finance.FinanceRefFile import FinanceRefFile, excel_to_json_data_gov_format
 
 def test_local_file_to_uploadfile(file_path: str) -> UploadFile:
     # Read the file from the local path

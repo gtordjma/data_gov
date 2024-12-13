@@ -1,6 +1,6 @@
 from fastapi import UploadFile
 
-from data_gov.shared.DataGouvException import DataGouvException
+from .DataGouvException import DataGouvException
 
 
 def validate_file_extension(file: UploadFile):

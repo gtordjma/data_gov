@@ -5,17 +5,18 @@ import pandas as pd
 import pandera as pa
 from fastapi import UploadFile
 
-from data_gov.shared.DataGouvException import DataGouvException
-from data_gov.shared.types.AssetTypes import AssetTypes
-from data_gov.use_cases.finance.FinanceFileTypes import FinanceFileTypes
-from data_gov.use_cases.finance.KpisFunctions import kpis_function_tab
-from data_gov.use_cases.finance.Utils import copy_to_directories
-from data_gov.use_cases.finance.submodule.finance.scripts.ProcessingFunction import processing_function
+from ...shared.DataGouvException import DataGouvException
+from ...shared.types.AssetTypes import AssetTypes
+from .FinanceFileTypes import FinanceFileTypes
+from .KpisFunctions import kpis_function_tab
+from .Utils import copy_to_directories
+from .submodule.finance.scripts.ProcessingFunction import processing_function
 
+assets_module_path = ".submodule.finance.scripts.assets"
 
 def load_dataset(filepath: UploadFile | str, file_type: str, asset_type: AssetTypes) -> pd.DataFrame:
     try:
-        module_path = f'finance.scripts.assets.{asset_type.value.upper()}.{file_type.lower()}.read'
+        module_path = f'{assets_module_path}.{asset_type.value.upper()}.{file_type.lower()}.read'
         read_module = importlib.import_module(module_path)
         read_function = getattr(read_module, 'read')
         df = read_function(filepath, nrows=1000)
@@ -24,12 +25,12 @@ def load_dataset(filepath: UploadFile | str, file_type: str, asset_type: AssetTy
         print_exc()
         raise DataGouvException(
             title="Load Dataset Error",
-            description=f"Le fichier envoyé ne correspond pas pour l'asset {asset_type.value} et le type {file_type}.\nErreur détaillé: {str(e)}"
+            description=f"The file sent does not match for asset {asset_type.value} and type {file_type}.<br/>Please check the contents of your file."
         )
 
 
 def get_schema_module(file_asset: AssetTypes, file_type: str):
-    schema_module_path = '.'.join(['finance.scripts.assets', file_asset.value.upper(), file_type, 'schema'])
+    schema_module_path = '.'.join([assets_module_path, file_asset.value.upper(), file_type, 'schema'])
 
     try:
         schema_module = importlib.import_module(schema_module_path)

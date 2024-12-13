@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from data_gov.shared.types.AssetTypes import AssetTypes
+from .types.AssetTypes import AssetTypes
 
 
 class ParquetFile:

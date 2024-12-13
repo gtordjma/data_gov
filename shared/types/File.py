@@ -1,6 +1,6 @@
 from fastapi import UploadFile
 
-from data_gov.shared.types.AssetTypes import AssetTypes
+from .AssetTypes import AssetTypes
 
 
 class File:

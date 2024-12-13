@@ -7,16 +7,16 @@ from pathlib import Path
 
 from fastapi import UploadFile
 
-from data_gov.use_cases.UseCase import UseCase
-from data_gov.use_cases.finance.FinanceFile import FinanceFile
-from data_gov.use_cases.finance.FinanceVersions import FinanceVersions
-from data_gov.use_cases.finance.ProcessFinanceFile import process_file
+from .use_cases.UseCase import UseCase
+from .use_cases.finance.FinanceFile import FinanceFile
+from .use_cases.finance.FinanceVersions import FinanceVersions
+from .use_cases.finance.ProcessFinanceFile import process_file
 
 # sys.path.append(os.path.abspath("airports_finances"))
 # sys.path.append(os.path.abspath('use_cases/finance/submodule'))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from data_gov.shared.types.AssetTypes import AssetTypes
-from data_gov.shared.types.FileStepStatus import FileStepStatus
+from .shared.types.AssetTypes import AssetTypes
+from .shared.types.FileStepStatus import FileStepStatus
 
 
 def test_local_file_to_uploadfile(file_path: str) -> UploadFile:

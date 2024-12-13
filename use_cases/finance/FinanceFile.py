@@ -3,14 +3,14 @@ from typing import Optional
 
 from fastapi import UploadFile
 
-from data_gov.shared.CheckFile import validate_file_extension
-from data_gov.shared.DataGouvException import DataGouvException
-from data_gov.shared.types.AssetTypes import AssetTypes
-from data_gov.shared.types.File import File
-from data_gov.shared.types.FileStepStatus import FileStepStatus
-from data_gov.use_cases.finance.FinanceFileTypes import FinanceFileTypes
-from data_gov.use_cases.finance.FinanceVersions import FinanceVersions
-from data_gov.use_cases.finance.Utils import get_sources, get_last_day
+from ...shared.DataGouvException import DataGouvException
+from ...shared.types.AssetTypes import AssetTypes
+from ...shared.types.File import File
+from ...shared.types.FileStepStatus import FileStepStatus
+from ...use_cases.finance.FinanceFileTypes import FinanceFileTypes
+from ...use_cases.finance.FinanceVersions import FinanceVersions
+from ...use_cases.finance.Utils import get_sources, get_last_day
+from ...shared.CheckFile import validate_file_extension
 
 
 class FinanceFile(File):
@@ -57,6 +57,7 @@ class FinanceFile(File):
             print(e)
             raise e
         except Exception as e:
+            print(e)
             raise DataGouvException(
                 title="Internal Error",
                 description="Internal error: saving the tmp file has failed. Please contact support."

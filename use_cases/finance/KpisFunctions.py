@@ -4,7 +4,7 @@ from typing import Callable, Dict
 import numpy as np
 import pandas_gbq
 
-from data_gov.use_cases.finance.FinanceFileTypes import FinanceFileTypes
+from .FinanceFileTypes import FinanceFileTypes
 
 GCP_PROJECT = os.getenv('GCP_PROJECT')
 

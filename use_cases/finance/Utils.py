@@ -8,10 +8,10 @@ from typing import Dict
 
 import yaml
 
-from data_gov.shared.DataGouvException import DataGouvException
-from data_gov.shared.ParquetFile import ParquetFile
-from data_gov.shared.types import AssetTypes
-from data_gov.use_cases.finance.submodule.finance.scripts.utils.Consts import DATA_FOLDER
+from ...shared.DataGouvException import DataGouvException
+from ...shared.ParquetFile import ParquetFile
+from ...shared.types import AssetTypes
+from ...use_cases.finance.submodule.finance.scripts.utils.Consts import DATA_FOLDER
 
 
 def get_last_day(mois: str, annee: str) -> str:
