@@ -1,10 +1,11 @@
 import calendar
+from collections import defaultdict
 import os
 import shutil
 import uuid
 from enum import Enum
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, Optional
 
 import yaml
 
@@ -88,6 +89,90 @@ def get_sources(asset_type: AssetTypes, file_type: str):
             description=f"Des erreurs ont été détectées lors de la recupération de la fonction pour l'asset {asset_type.value} et la source {file_type}.\nErreur détaillé: {str(e)}"
         )
 
+def get_assets_sources(asset_type: str = None) -> Dict[str, List[Dict[str, list]]]:
+    """
+    Extrait les données brutes du fichier de configuration avec option de filtrage par asset.
+    
+    Args:
+        config_file: Le fichier de configuration chargé
+        asset_name: Nom de l'asset à filtrer (optionnel)
+    """
+    try:
+        config_file = load_yaml(config_path="finance/submodule/finance/conf/parameters.yaml")
+        result = {}
+        assets_to_process = {asset_type: config_file['assets'][asset_type]} if asset_type else config_file['assets']
+        
+        for asset_type, asset_data in assets_to_process.items():
+            if asset_type in AssetTypes.AssetTypes.__members__:
+                sources = []
+                for source_name, source_config in asset_data['source'].items():
+                    if "finance_mapping_local" not in source_name and "finance_mapping_usecase" not in source_name:
+                        sources.append({
+                            "source_name": source_name,
+                            "source_config": source_config,
+                            "asset_type": asset_type
+                        })
+                result[asset_type] = sources
+        return result
+    except KeyError as e:
+        raise DataGouvException(
+            title="Get Assets Sources",
+            description=f"Asset {asset_type} non trouvé dans la configuration: {str(e)}"
+        )
+    except Exception as e:
+        raise DataGouvException(
+            title="Get Assets Sources",
+            description=f"Erreur lors de l'extraction des sources: {str(e)}"
+        )
+
+
+def transform_to_ingestion_format(raw_data: Dict[str, List[Dict[str, list]]]) -> Dict[str, list]:
+    """
+    Transforme les données brutes en format d'ingestion.
+    """
+    result = defaultdict(list)
+    
+    for asset_type, sources in raw_data.items():
+        for source_data in sources:
+            source_name = source_data["source_name"]
+            source_config = source_data["source_config"]
+            
+            source_formatted = source_name.replace('finance_', '').upper()
+            file_type = source_config.get('filename_contains')
+            
+            entry = {
+                "source": f"{asset_type.lower()}_{source_name}",
+                "file_type": source_formatted,
+                "status": {
+                    "loaded": "pending",
+                    "checkfile": "pending",
+                    "checkKpis": "pending",
+                    "processed": "pending"
+                },
+                "uploaded_by": "",
+                "date": ""
+            }
+            
+            if source_formatted != file_type:
+                entry["linked"] = file_type
+                
+            if source_formatted in ["CAPEX_FORECAST", "CPXFORECAST", "BUDGET"]:
+                for version in ["B0", "R1", "R2", "R3"]:
+                    tmp = entry.copy()
+                    tmp["version"] = version
+                    result[asset_type].append(tmp)
+            else:
+                result[asset_type].append(entry)
+                
+    return dict(result)
+
+async def get_ingestion_template_data(asset_type: str = None) -> Dict[str, list]:
+    """
+    Fonction principale qui combine l'extraction et la transformation.
+    Peut être filtrée par asset spécifique.
+    """
+    raw_data = get_assets_sources(asset_type)
+    return transform_to_ingestion_format(raw_data)
 
 def create_directory(file_asset, file_type):
     relative_tmp_path = DATA_FOLDER + '/raw'

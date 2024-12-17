@@ -12,7 +12,7 @@ from .KpisFunctions import kpis_function_tab
 from .Utils import copy_to_directories
 from .submodule.finance.scripts.ProcessingFunction import processing_function
 
-assets_module_path = ".submodule.finance.scripts.assets"
+assets_module_path = "data_gov.use_cases.finance.submodule.finance.scripts.assets"
 
 def load_dataset(filepath: UploadFile | str, file_type: str, asset_type: AssetTypes) -> pd.DataFrame:
     try:
@@ -103,13 +103,33 @@ def process_file(filename, running_date: str, filepath: str, file_type: FinanceF
         )
 
 
-def check_ref(filename, filepath: str, file_type: FinanceFileTypes, file_asset: AssetTypes):
+def generate_check_ref_messages(data):
+    messages = []
+    mapping_error = False
+
+    for key, value in data.items():
+        if isinstance(value, dict):
+            for column, ids in value.items():
+                if ids:  # Vérifie si le tableau est vide
+                    msg = f"The file you just uploaded contains IDs that are not mapped with the reference file {key} in the {column} column.<br/>The following IDs are not mapped: {ids}."
+                    if 'MAPPING_LOCAL'in msg:
+                        msg += "<br/>Please resolve these mappings then you can upload your file again."
+                    messages.append(msg)
+
+    if any('MAPPING_LOCAL' in message for message in messages):
+        raise DataGouvException(
+            title="Ref Check Function Error",
+            description=f"{'<br/><br/>'.join(messages)}"
+        )
+
+    return messages
+
+def get_check_ref_data(filename, filepath: str, file_type: FinanceFileTypes, file_asset: AssetTypes):
     """
     Processus complet de traitement d'un fichier valide.
     """
     try:
-        schema_module = importlib.import_module(
-            f"finance.scripts.assets.{file_asset.value}.{file_type.value.lower()}.check_refs")
+        schema_module = importlib.import_module(f"{assets_module_path}.{file_asset.value}.{file_type.value.lower()}.check_refs")
         return schema_module.check_refs(filepath)
     except ModuleNotFoundError as e:
         print_exc()
@@ -122,3 +142,9 @@ def check_ref(filename, filepath: str, file_type: FinanceFileTypes, file_asset: 
             title="Ref Check Function Error",
             description=f"{str(e)}"
         )
+        
+def get_check_ref_messages(filename, filepath: str, file_type: FinanceFileTypes, file_asset: AssetTypes) -> tuple[list, bool]:
+    check_ref_data = get_check_ref_data(filename, filepath, file_type, file_asset)
+    if check_ref_data is None:
+        return []
+    return generate_check_ref_messages(check_ref_data)
