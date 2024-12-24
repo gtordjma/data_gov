@@ -1,5 +1,6 @@
 import calendar
 from collections import defaultdict
+import copy
 import os
 import shutil
 import uuid
@@ -125,13 +126,18 @@ def get_assets_sources(asset_type: str = None) -> Dict[str, List[Dict[str, list]
             description=f"Erreur lors de l'extraction des sources: {str(e)}"
         )
 
+def add_linked_field(entries, linked_files):
+    for entry in entries:
+        if entry["file_type"] in linked_files:
+            entry["linked"] = entry["file_type"]
 
 def transform_to_ingestion_format(raw_data: Dict[str, List[Dict[str, list]]]) -> Dict[str, list]:
     """
     Transforme les données brutes en format d'ingestion.
     """
     result = defaultdict(list)
-    
+    linked_files = []
+    special_uc = ["CAPEX_FORECAST", "CPXFORECAST", "BUDGET"]
     for asset_type, sources in raw_data.items():
         for source_data in sources:
             source_name = source_data["source_name"]
@@ -153,17 +159,21 @@ def transform_to_ingestion_format(raw_data: Dict[str, List[Dict[str, list]]]) ->
                 "date": ""
             }
             
-            if source_formatted != file_type:
+            if source_formatted != file_type and source_formatted not in special_uc:
+                if file_type not in linked_files:
+                    linked_files.append(file_type)
                 entry["linked"] = file_type
                 
-            if source_formatted in ["CAPEX_FORECAST", "CPXFORECAST", "BUDGET"]:
+            if source_formatted in special_uc:
                 for version in ["B0", "R1", "R2", "R3"]:
-                    tmp = entry.copy()
+                    tmp = copy.deepcopy(entry)
                     tmp["version"] = version
                     result[asset_type].append(tmp)
             else:
                 result[asset_type].append(entry)
-                
+
+    for asset in result:
+        add_linked_field(result[asset], linked_files)
     return dict(result)
 
 async def get_ingestion_template_data(asset_type: str = None) -> Dict[str, list]:

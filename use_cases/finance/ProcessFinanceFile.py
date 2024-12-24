@@ -5,6 +5,7 @@ import pandas as pd
 import pandera as pa
 from fastapi import UploadFile
 
+from ...shared.utils.gcp import insert_file_into_tmp_bucket
 from ...shared.DataGouvException import DataGouvException
 from ...shared.types.AssetTypes import AssetTypes
 from .FinanceFileTypes import FinanceFileTypes
@@ -83,11 +84,14 @@ def process_file(filename, running_date: str, filepath: str, file_type: FinanceF
                 title="Processing Function Error",
                 description=f"{str(e)}"
             )
+            
+        parquet_file_path = files[0]
+        insert_file_into_tmp_bucket(file_asset, "finance", filename, file_type.value, parquet_file_path)
 
         if file_type in kpis_function_tab:
             try:
                 print("kpis_function_tab")
-                return kpis_function_tab[file_type](files[0]), files[0]
+                return kpis_function_tab[file_type](parquet_file_path), parquet_file_path
             except Exception as e:
                 raise DataGouvException(
                     title="Kpis Function Error",
@@ -95,7 +99,7 @@ def process_file(filename, running_date: str, filepath: str, file_type: FinanceF
                 )
         else:
             print('no kpis_function_tab')
-            return None, files[0]
+            return {"no_kpis_function": [[""],[""]]}, parquet_file_path
     else:
         raise DataGouvException(
             title="Filename Error",

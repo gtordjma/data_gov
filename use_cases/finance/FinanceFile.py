@@ -38,16 +38,25 @@ class FinanceFile(File):
         except DataGouvException as e:
             print(e)
             raise e
+        
+    def get_running_date(self):
+        return f"{self.year}-{self.month}-{get_last_day(self.month, self.year)}"
 
     async def save_file_to_tmp_folder(self) -> tuple[str, str, Path]:
         try:
+            # Validate and prepare file_asset and file_version
+            file_asset_value = self.file_asset.value if not isinstance(self.file_asset, str) else self.file_asset
+            file_version_value = self.file_version.value if self.file_version and not isinstance(self.file_version, str) else self.file_version
+
             mime = validate_file_extension(self.file)
-            running_date = f"{self.year}-{self.month}-{get_last_day(self.month, self.year)}"
-            if self.file_version:
-                file_name = f"{self.file_asset.value}_FINANCE_{self.file_type}_{self.file_version.value}_{running_date}.{mime}"
+            running_date = self.get_running_date()
+            
+            if file_version_value:
+                file_name = f"{file_asset_value}_FINANCE_{self.file_type}_{file_version_value}_{running_date}.{mime}"
             else:
-                file_name = f"{self.file_asset.value}_FINANCE_{self.file_type}_{running_date}.{mime}"
-            # TODO to save  directecly to raw
+                file_name = f"{file_asset_value}_FINANCE_{self.file_type}_{running_date}.{mime}"
+            
+            # TODO to save directly to raw
             file_path = Path(__file__).parent.parent.parent / "saved_file_local" / file_name
             with open(file_path, "wb") as buffer:
                 content = await self.file.read()

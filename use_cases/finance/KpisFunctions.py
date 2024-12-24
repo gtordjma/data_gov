@@ -77,25 +77,51 @@ def ar(df):
 
 
 def finance_receivables_kpis(file):
-    kpis = {}
-    df = pd.read_parquet(file)
-    # Extraire les informations de partition
-    etl_ds = file.split("etl_ds=")[1].split("/")[0]
-    ingestion_id = file.split("ingestionId=")[1].split("/")[0]
+    try:
+        kpis = {}
+        df = pd.read_parquet(file)
+        
+        # Vérifier si le DataFrame est vide
+        if df.empty:
+            return {"receivables_kpi": [[""]], "receivables_top_five": [[""]]}
 
-    # Ajouter les colonnes
-    df['etl_ds'] = etl_ds
-    df['ingestionId'] = ingestion_id
+        # Vérification sécurisée du chemin du fichier
+        try:
+            etl_ds = file.split("etl_ds=")[1].split("/")[0]
+            ingestion_id = file.split("ingestionId=")[1].split("/")[0]
+        except IndexError:
+            etl_ds = "unknown"
+            ingestion_id = "unknown"
 
-    kpis["receivables_kpi"] = df_to_array(ar(df))
-    tab = (df.groupby('customerName', as_index=False)
-           .agg(amountSum=('amountValue', lambda x: round(x.sum(), 2)))
-           .assign(amountSum=lambda df: df['amountSum'].abs())
-           .sort_values(by='amountSum', ascending=False)
-           .head(5))[['customerName', 'amountSum']]
-    tab['amountSum'] = tab['amountSum'].apply(lambda x: f"{x:,.0f}".replace(",", " "))
-    kpis["receivables_top_five"] = df_to_array(tab)
-    return kpis
+        # Ajouter les colonnes
+        df['etl_ds'] = etl_ds
+        df['ingestionId'] = ingestion_id
+
+        ar_result = ar(df)
+        if ar_result.empty:
+            kpis["receivables_kpi"] = [[""]]
+        else:
+            kpis["receivables_kpi"] = df_to_array(ar_result)
+
+        if 'customerName' not in df.columns or 'amountValue' not in df.columns:
+            kpis["receivables_top_five"] = [[""]]
+        else:
+            tab = (df.groupby('customerName', as_index=False)
+                  .agg(amountSum=('amountValue', lambda x: round(x.sum(), 2)))
+                  .assign(amountSum=lambda df: df['amountSum'].abs())
+                  .sort_values(by='amountSum', ascending=False))
+            
+            if tab.empty:
+                kpis["receivables_top_five"] = [[""]]
+            else:
+                tab = tab.head(5)[['customerName', 'amountSum']]
+                tab['amountSum'] = tab['amountSum'].apply(lambda x: f"{x:,.0f}".replace(",", " "))
+                kpis["receivables_top_five"] = df_to_array(tab)
+
+        return kpis
+        
+    except Exception as e:
+        print(f"Error in finance_receivables_kpis: {str(e)}")
 
 
 # 'level0', 'appSheetId','runId', 'userEmail',
