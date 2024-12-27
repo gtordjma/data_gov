@@ -137,13 +137,14 @@ def transform_to_ingestion_format(raw_data: Dict[str, List[Dict[str, list]]]) ->
     """
     result = defaultdict(list)
     linked_files = []
-    special_uc = ["CAPEX_FORECAST", "CPXFORECAST", "BUDGET"]
+    special_uc = ["CPXFORECAST", "BUDGET"]
     for asset_type, sources in raw_data.items():
         for source_data in sources:
             source_name = source_data["source_name"]
             source_config = source_data["source_config"]
             
             source_formatted = source_name.replace('finance_', '').upper()
+            source_formatted = "CPXFORECAST" if source_formatted == "CAPEX_FORECAST" else source_formatted
             file_type = source_config.get('filename_contains')
             
             entry = {

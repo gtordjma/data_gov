@@ -26,13 +26,8 @@ async def get_quality_data(use_case: str, asset: str, year: str, month: str):
         return []
     
 async def get_quality_data_formatted_from_ingestion(use_case: str, asset: str, year: str, month: str):
-    # Exécution de get_quality_data dans un thread pour ne pas bloquer
-    quality_data = await get_quality_data(
-        use_case, 
-        asset, 
-        year, 
-        month
-    )
+    quality_data = await get_quality_data(use_case, asset, year, month)
+    print("quality_data OG", quality_data)
     
     # Formatage des données
     for entry in quality_data:
@@ -50,14 +45,45 @@ async def get_quality_data_formatted_from_ingestion(use_case: str, asset: str, y
             entry["final_filename"] = None
             entry["date"] = None
 
-    # Groupement par file_type
-    grouped_data = defaultdict(list)
+    # Patterns pour détecter les versions dans les noms de fichiers
+    version_patterns = {
+        'cpxforecast': r'FINANCE_CPXFORECAST_(B0|R[1-9])',
+        'budget': r'FINANCE_BUDGET_(B0|R[1-9])'
+    }
+    
+    grouped_by_type = defaultdict(list)
+    grouped_by_version = defaultdict(list)
+    
+    # Groupement selon le type de fichier
     for entry in quality_data:
-        grouped_data[entry["file_type"]].append(entry)
-
-    # Garder l'entrée la plus récente pour chaque type
+        file_type = entry["file_type"]
+        
+        # Vérification pour les deux types spéciaux
+        is_special_type = False
+        for type_key, pattern in version_patterns.items():
+            if type_key in file_type.lower():
+                match = re.search(pattern, entry["file_name_sftp"])
+                if match:
+                    version = match.group(1)
+                    grouped_by_version[version].append(entry)
+                    is_special_type = True
+                    break
+                    
+        if not is_special_type:
+            grouped_by_type[file_type].append(entry)
+    
     result = []
-    for entries in grouped_data.values():
+    
+    # Traitement des fichiers standards
+    for entries in grouped_by_type.values():
+        most_recent = max(entries, key=lambda x: (
+            x["reception_time"] if isinstance(x["reception_time"], datetime)
+            else datetime.strptime(x["reception_time"], '%Y-%m-%d %H:%M:%S')
+        ))
+        result.append(most_recent)
+    
+    # Traitement des fichiers avec versions
+    for entries in grouped_by_version.values():
         most_recent = max(entries, key=lambda x: (
             x["reception_time"] if isinstance(x["reception_time"], datetime)
             else datetime.strptime(x["reception_time"], '%Y-%m-%d %H:%M:%S')

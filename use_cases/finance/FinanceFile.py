@@ -41,21 +41,21 @@ class FinanceFile(File):
         
     def get_running_date(self):
         return f"{self.year}-{self.month}-{get_last_day(self.month, self.year)}"
+    
+    def get_file_name(self):
+        file_asset_value = self.file_asset.value if not isinstance(self.file_asset, str) else self.file_asset
+        mime = validate_file_extension(self.file)
+        file_version_value = self.file_version.value if self.file_version and not isinstance(self.file_version, str) else self.file_version
+        running_date = self.get_running_date()
+        if file_version_value:
+            return f"{file_asset_value}_FINANCE_{self.file_type}_{file_version_value}_{running_date}.{mime}"
+        else:
+            return f"{file_asset_value}_FINANCE_{self.file_type}_{running_date}.{mime}"
 
     async def save_file_to_tmp_folder(self) -> tuple[str, str, Path]:
         try:
-            # Validate and prepare file_asset and file_version
-            file_asset_value = self.file_asset.value if not isinstance(self.file_asset, str) else self.file_asset
-            file_version_value = self.file_version.value if self.file_version and not isinstance(self.file_version, str) else self.file_version
-
-            mime = validate_file_extension(self.file)
             running_date = self.get_running_date()
-            
-            if file_version_value:
-                file_name = f"{file_asset_value}_FINANCE_{self.file_type}_{file_version_value}_{running_date}.{mime}"
-            else:
-                file_name = f"{file_asset_value}_FINANCE_{self.file_type}_{running_date}.{mime}"
-            
+            file_name = self.get_file_name()
             # TODO to save directly to raw
             file_path = Path(__file__).parent.parent.parent / "saved_file_local" / file_name
             with open(file_path, "wb") as buffer:

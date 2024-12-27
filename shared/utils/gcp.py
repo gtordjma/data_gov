@@ -72,6 +72,7 @@ class GCSFileHandler:
             raise ValueError(f"Download failed: {response.status_code} - {response.text}")
         
         local_path = os.path.join(tempfile.gettempdir(), file_name)
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
         with open(local_path, 'wb') as temp_file:
             temp_file.write(response.content)
         return local_path
@@ -188,7 +189,7 @@ def download_file_from_tmp_bucket(asset: AssetTypes, use_case: str, file_source:
         bucket_name, blob_name = file_handler.parse_gcs_url(tmp_url)
         
         signed_url = gcs_client.generate_signed_url(bucket_name, blob_name)
-        local_path = file_handler.download_file(signed_url, "output.parquet")
+        local_path = file_handler.download_file(signed_url, f"{use_case}/{file_source}/{etl_info}/output.parquet")
         
         return local_path
     except Exception as e:
