@@ -13,8 +13,7 @@ async def get_quality_data(use_case: str, asset: str, year: str, month: str):
         FROM `va-sdh-hq-staging.monitoring.sdh_file_status`
         WHERE use_case = '{use_case}'
               AND asset = '{asset}'
-              AND EXTRACT(YEAR FROM reception_time) = {year}
-              AND EXTRACT(MONTH FROM reception_time) = {month}
+              AND file_name_sftp LIKE '%_{year}-{month}-%'
         """
         loop = asyncio.get_event_loop()
         query_job = await loop.run_in_executor(None, partial(easy_env.gcloud.BQ.query, query))
@@ -47,7 +46,7 @@ async def get_quality_data_formatted_from_ingestion(use_case: str, asset: str, y
 
     # Patterns pour détecter les versions dans les noms de fichiers
     version_patterns = {
-        'cpxforecast': r'FINANCE_CPXFORECAST_(B0|R[1-9])',
+        'capex_forecast': r'FINANCE_CPXFORECAST_(B0|R[1-9])',
         'budget': r'FINANCE_BUDGET_(B0|R[1-9])'
     }
     

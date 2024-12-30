@@ -4,7 +4,7 @@ from enum import Enum
 class FinanceFileTypes(Enum):
     FINANCE_BUDGET = 'finance_budget'
     FINANCE_CAPEX = 'finance_capex'
-    FINANCE_CPXFORECAST = 'finance_cpxforecast'
+    FINANCE_CAPEX_FORECAST = 'finance_capex_forecast'
     FINANCE_CAPEX_FORECAST_LONGTERM = 'finance_capex_forecast_longterm'
     FINANCE_REF_CAPEX_PROJECTS = 'finance_ref_capex_projects'
     FINANCE_CAPEX_DETAILED = 'finance_capex_detailed'

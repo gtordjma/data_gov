@@ -108,6 +108,7 @@ async def process_file_wrapper(
         finance_file.update_status("checkKpis", FileStepStatus.ERROR)
         return {
             "success": False,
+            "version": version,
             "file_type_source": f"{file_asset.value.lower()}_{file_type_source.value}",
             "status": copy.deepcopy(finance_file.status),
             "error": {
@@ -123,6 +124,7 @@ async def process_file_wrapper(
         
         return {
             "success": False,
+            "version": version,
             "file_type_source": f"{file_asset.value.lower()}_{file_type_source.value}",
             "status": copy.deepcopy(finance_file.status),
             "error": {

@@ -82,8 +82,7 @@ def get_params(asset_type: AssetTypes, source_name: str, params: str):
 def get_sources(asset_type: AssetTypes, file_type: str):
     try:
         config_file = load_yaml(config_path="finance/submodule/finance/conf/parameters.yaml")
-        return [file for file, file_ in config_file['assets'][asset_type.value.upper()]['source'].items() if
-                file_['filename_contains'].upper() == file_type.upper()]
+        return [file for file, file_ in config_file['assets'][asset_type.value.upper()]['source'].items() if file_['filename_contains'].upper() == file_type.upper()]
     except Exception as e:
         raise DataGouvException(
             title="Get File Type Source ",

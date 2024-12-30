@@ -356,7 +356,7 @@ def finance_capex_kpis(file):
 kpis_function_tab: Dict[FinanceFileTypes, Callable[[str], dict]] = {
     FinanceFileTypes.FINANCE_DEPOSITS: finance_deposits_kpis,  # OK
     FinanceFileTypes.FINANCE_GUARANTEES: finance_guarantees_kpis,  # OK
-    FinanceFileTypes.FINANCE_CPXFORECAST: finance_capex_forecast_kpis,  # CHECK CPX FILES ERROR
+    FinanceFileTypes.FINANCE_CAPEX_FORECAST: finance_capex_forecast_kpis,  # CHECK CPX FILES ERROR
     FinanceFileTypes.FINANCE_RECEIVABLES: finance_receivables_kpis,  # OK
     FinanceFileTypes.FINANCE_CUSTOMER_REVENUES: finance_customer_kpis,
     FinanceFileTypes.FINANCE_PROCUREMENTS: finance_procurement_kpis,  # OK
