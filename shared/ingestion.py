@@ -10,8 +10,6 @@ from typing import Dict, List, Optional, Tuple
 
 from fastapi import HTTPException, UploadFile
 
-from submodules.data_gov.use_cases.finance.FinanceFileTypes import FinanceFileTypes
-
 from .utils.gcp import download_file_from_tmp_bucket, generate_signed_url_and_download
 
 from .DataGouvException import DataGouvException
@@ -21,6 +19,8 @@ from ..use_cases.finance.FinanceFile import FinanceFile
 from ..use_cases.finance.ProcessFinanceFile import get_check_ref_messages, process_file
 from ..use_cases.finance.Utils import add_parquet_file
 from ..use_cases.finance.KpisFunctions import kpis_function_tab
+from ..use_cases.finance.FinanceFileTypes import FinanceFileTypes
+from ..use_cases.finance.FinanceVersions import FinanceVersions
 
 from google.cloud import storage
 from google.oauth2 import service_account
@@ -52,13 +52,14 @@ async def process_file_wrapper(
     file_asset: AssetTypes,
     finance_file: 'FinanceFile',
     tmp_parquet_files_dict: Dict,
-    version: str | None
+    version: FinanceVersions | None
 ) -> Dict:
     """
     Wrapper pour process_file qui gère les erreurs et retourne un dictionnaire formaté
     """
     try:
-        local_parquet_file = await asyncio.to_thread(download_file_from_tmp_bucket, file_asset, "finance", file_type_source.value, running_date)
+        local_file_path, tmp_bucket_url = await asyncio.to_thread(download_file_from_tmp_bucket, file_asset, "finance", file_type_source.value, running_date, version)
+        print(f"tmp_bucket_url: {tmp_bucket_url}")
         check_ref_messages = await asyncio.to_thread(
                 get_check_ref_messages,
                 file_name,
@@ -66,33 +67,23 @@ async def process_file_wrapper(
                 file_type_source,
                 file_asset
             )
-        if not local_parquet_file:
-            kpis, parquet_file_path = await asyncio.to_thread(
+        if not tmp_bucket_url:
+            kpis, tmp_bucket_url = await asyncio.to_thread(
                 process_file,
                 file_name,
                 running_date,
                 file_path,
                 file_type_source,
-                file_asset
-            )
-
-            finance_file.update_status("checkKpis", FileStepStatus.RUNNING)
-
-            file_id = await asyncio.to_thread(
-                add_parquet_file,
-                tmp_parquet_files_dict,
                 file_asset,
-                "finance",
-                file_name,
-                file_type_source.value,
-                parquet_file_path,
-                file_path
+                version
             )
-        else:
-            kpis = kpis_function_tab[file_type_source](local_parquet_file) if file_type_source in kpis_function_tab else {"no_kpis_function": [[""],[""]]}
+
             finance_file.update_status("checkKpis", FileStepStatus.RUNNING)
-            parquet_file_path = local_parquet_file
-            file_id = None
+
+        else:
+            kpis = kpis_function_tab[file_type_source](tmp_bucket_url) if file_type_source in kpis_function_tab else {"no_kpis_function": [[""],[""]]}
+            finance_file.update_status("checkKpis", FileStepStatus.RUNNING)
+            #tmp_bucket_url = local_parquet_file
         
         return {
             "success": True,
@@ -100,8 +91,8 @@ async def process_file_wrapper(
             "file_type_source": f"{file_asset.value.lower()}_{file_type_source.value}",
             "status": copy.deepcopy(finance_file.status),
             "kpis": kpis,
-            "file_id": str(file_id),
-            "check_ref_messages": check_ref_messages
+            "check_ref_messages": check_ref_messages,
+            "tmp_bucket_url": tmp_bucket_url
         }
         
     except DataGouvException as dge:
@@ -311,12 +302,17 @@ def is_valid_entry(entry: Dict, template: Dict, year: int, month: int) -> bool:
 
     if not is_valid_landing_url(entry.get("landing_url")):
         return False
-    return (
-        entry["file_type"] == template["source"] and
-        entry.get("date", {}).get("year") == year and
-        entry.get("date", {}).get("month") == month and
-        ("version" not in template or template["version"] in entry.get("final_filename", ""))
-        )
+    if entry["file_type"] != template["source"]:
+        return False
+    if entry.get("date", {}).get("year") != year:
+        return False
+    is_special_file = ("capex_forecast" in entry["file_type"] or "budget" in entry["file_type"])
+    if not is_special_file and entry.get("date", {}).get("month") != month:
+        return False
+    if "version" in template:
+        if template["version"] not in entry.get("final_filename", ""):
+            return False
+    return True
 
 def handle_running_status(
     tmp_parquet_files_dict,

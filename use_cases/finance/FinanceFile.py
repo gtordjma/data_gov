@@ -14,6 +14,10 @@ from ...shared.CheckFile import validate_file_extension
 
 
 class FinanceFile(File):
+    @staticmethod
+    def get_running_date_with_params(year: str, month: str) -> str:
+       return f"{year}-{month}-{get_last_day(month, year)}"
+   
     def __init__(
             self,
             file: UploadFile,
@@ -41,6 +45,7 @@ class FinanceFile(File):
         
     def get_running_date(self):
         return f"{self.year}-{self.month}-{get_last_day(self.month, self.year)}"
+
     
     def get_file_name(self):
         file_asset_value = self.file_asset.value if not isinstance(self.file_asset, str) else self.file_asset

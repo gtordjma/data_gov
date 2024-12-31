@@ -6,17 +6,38 @@ import re
 from .easy_env import easy_env
 
 
-async def get_quality_data(use_case: str, asset: str, year: str, month: str):
+async def get_quality_data(use_case: str, asset: str, year: str, month: str = None):
     try:
-        query = f"""
+        # Base query for regular files (monthly)
+        regular_query = f"""
         SELECT *
         FROM `va-sdh-hq-staging.monitoring.sdh_file_status`
         WHERE use_case = '{use_case}'
               AND asset = '{asset}'
+              AND file_name_sftp NOT LIKE '%_CPXFORECAST_%'
+              AND file_name_sftp NOT LIKE '%_BUDGET_%'
               AND file_name_sftp LIKE '%_{year}-{month}-%'
         """
+
+        # Query for special files (yearly)
+        special_query = f"""
+        SELECT *
+        FROM `va-sdh-hq-staging.monitoring.sdh_file_status`
+        WHERE use_case = '{use_case}'
+              AND asset = '{asset}'
+              AND (file_name_sftp LIKE '%_CPXFORECAST_%' OR file_name_sftp LIKE '%_BUDGET_%')
+              AND file_name_sftp LIKE '%_{year}-%'
+        """
+
+        # Combine both queries with UNION ALL
+        combined_query = f"""
+        {regular_query}
+        UNION ALL
+        {special_query}
+        """
+
         loop = asyncio.get_event_loop()
-        query_job = await loop.run_in_executor(None, partial(easy_env.gcloud.BQ.query, query))
+        query_job = await loop.run_in_executor(None, partial(easy_env.gcloud.BQ.query, combined_query))
         results = await loop.run_in_executor(None, query_job.result)
         rows = [dict(row) for row in results]
         return rows

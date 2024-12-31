@@ -159,7 +159,7 @@ def transform_to_ingestion_format(raw_data: Dict[str, List[Dict[str, list]]]) ->
                 "date": ""
             }
             
-            if source_formatted != file_type and source_formatted not in special_uc:
+            if source_formatted != file_type and source_formatted not in special_uc and source_formatted not in ["SUPPLIER_OPEX"]:
                 if file_type not in linked_files:
                     linked_files.append(file_type)
                 entry["linked"] = file_type

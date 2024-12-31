@@ -7,8 +7,10 @@ from fastapi import HTTPException
 import requests
 import re
 
+
 from ..DataGouvException import DataGouvException
 from ..types.AssetTypes import AssetTypes
+from ...use_cases.finance.FinanceVersions import FinanceVersions
 
 from google.cloud import storage
 from google.oauth2 import service_account
@@ -95,17 +97,23 @@ class BucketHandler:
         
     def extract_etl_info(self, file_path: str) -> str:
         """Extrait les informations ETL du chemin du fichier."""
-        match = re.search(r"etl_ds=\d{4}-\d{2}-\d{2}/ingestionId=[A-Z]+", file_path)
+        match = re.search(r"etl_ds=(\d{4})-\d{2}-\d{2}/ingestionId=[A-Z]+", file_path)
         if not match:
             raise ValueError(f"Invalid file path format: {file_path}")
-        return match.group(0)
+        return match.group(0), match.group(1)
     
     def get_etl_info(self, running_date: str, asset: str) -> str:
         return f"etl_ds={running_date}/ingestionId={asset.upper()}"
     
-    def get_parquet_url(self, bucket_type: str, use_case: str, file_source: str, etl_info: str) -> str:
+    def get_parquet_url(self, bucket_type: str, use_case: str, file_source: str, etl_info: str, year: str = "", version: FinanceVersions | None = None) -> str:
+        print("get_parquet_url", version, year) 
         bucket_prefix = "va-sdh-hq-staging-safe" if bucket_type == "safe" else "va-sdh-hq-staging-apps"
-        return f"gs://{bucket_prefix}/{use_case}/{file_source}/{etl_info}/output.parquet"
+        output_version_prefix = ""
+        if version and version.value in ["B0", "R1", "R2", "R3"] and len(year) == 4:
+            output_version_prefix = f"{version.value}{year}_"
+        print("output_version_prefix", output_version_prefix, version, year)    
+                 
+        return f"gs://{bucket_prefix}/{use_case}/{file_source}/{etl_info}/{output_version_prefix}output.parquet"
     
     
 def generate_signed_url_and_download(gs_url: str, download_locally: bool = False) -> Tuple[str, Optional[str]]:
@@ -146,14 +154,14 @@ def generate_upload_signed_url_v4(bucket_name: str, blob_name: str, file_path: s
     except Exception as e:
         raise("An error occurred during file upload:", e)
 
-def insert_file_into_bucket(bucket_type: str, asset: AssetTypes, use_case: str, file_name: str, file_source: str, parquet_file_path: str) -> str:
+def insert_file_into_bucket(bucket_type: str, asset: AssetTypes, use_case: str, file_name: str, file_source: str, parquet_file_path: str, version: FinanceVersions | None = None) -> str:
     try:
         gcs_client = GCSClient()
         file_handler = GCSFileHandler(gcs_client)
         bucket_handler = BucketHandler(gcs_client, file_handler)
         
-        etl_info = bucket_handler.extract_etl_info(parquet_file_path)
-        url = bucket_handler.get_parquet_url(bucket_type, use_case, file_source, etl_info)
+        etl_info, year = bucket_handler.extract_etl_info(parquet_file_path)
+        url = bucket_handler.get_parquet_url(bucket_type, use_case, file_source, etl_info, year, version)
         print("insert_file_into_bucket", url)
         
         bucket_name, blob_name = file_handler.parse_gcs_url(url)
@@ -171,26 +179,79 @@ def insert_file_into_bucket(bucket_type: str, asset: AssetTypes, use_case: str, 
             description=f"Bucket Upload Error: {str(e)}"
         )
 
-def insert_file_into_safe_bucket(asset: AssetTypes, use_case: str, file_name: str, file_source: str, parquet_file_path: str) -> str:
-    return insert_file_into_bucket("safe", asset, use_case, file_name, file_source, parquet_file_path)
+def insert_file_into_safe_bucket(asset: AssetTypes, use_case: str, file_name: str, file_source: str, parquet_file_path: str, version: FinanceVersions | None = None) -> str:
+    return insert_file_into_bucket("safe", asset, use_case, file_name, file_source, parquet_file_path, version)
 
-def insert_file_into_tmp_bucket(asset: AssetTypes, use_case: str, file_name: str, file_source: str, parquet_file_path: str) -> str:
-    return insert_file_into_bucket("tmp", asset, use_case, file_name, file_source, parquet_file_path)
+def insert_file_into_tmp_bucket(asset: AssetTypes, use_case: str, file_name: str, file_source: str, parquet_file_path: str, version: FinanceVersions | None = None) -> str:
+    return insert_file_into_bucket("tmp", asset, use_case, file_name, file_source, parquet_file_path, version)
 
-def download_file_from_tmp_bucket(asset: AssetTypes, use_case: str, file_source: str, running_date: str) -> Tuple[str, str]:
+def transfer_file_between_buckets(source_url: str) -> str:
+    """
+    Transfers a file from apps bucket to safe bucket by transforming the URL
+    and handling the file transfer.
+    
+    Args:
+        source_url: Source URL in apps bucket
+        
+    Returns:
+        str: Destination URL in safe bucket
+    """
     try:
+        # Transform URL
+        dest_url = source_url.replace(
+            'va-sdh-hq-staging-apps',
+            'va-sdh-hq-staging-safe'
+        )
+        
+        # Initialize clients
+        gcs_client = GCSClient()
+        file_handler = GCSFileHandler(gcs_client)
+        
+        # Download from source
+        signed_url, local_path = generate_signed_url_and_download(
+            source_url, 
+            download_locally=True
+        )
+        
+        if not local_path:
+            raise DataGouvException(
+                title="Transfer Error",
+                description="Failed to download source file"
+            )
+            
+        # Upload to destination
+        bucket_name, blob_name = file_handler.parse_gcs_url(dest_url)
+        signed_url = gcs_client.generate_signed_url(
+            bucket_name,
+            blob_name,
+            method="PUT",
+            content_type="application/octet-stream"
+        )
+        
+        file_handler.upload_file(signed_url, local_path)
+        return dest_url
+        
+    except Exception as e:
+        raise DataGouvException(
+            title="Transfer Error",
+            description=f"Failed to transfer file: {str(e)}"
+        )
+
+
+def download_file_from_tmp_bucket(asset: AssetTypes, use_case: str, file_source: str, running_date: str, version: FinanceVersions | None = None) -> Tuple[str, str]:
+    try:
+        print("download_file_from_tmp_bucket", asset, use_case, file_source, running_date, version)
         gcs_client = GCSClient()
         file_handler = GCSFileHandler(gcs_client)
         bucket_handler = BucketHandler(gcs_client, file_handler)
-        
         etl_info = bucket_handler.get_etl_info(running_date, asset.value)
-        tmp_url = bucket_handler.get_parquet_url("tmp", use_case, file_source, etl_info)
-        print("download_file_from_tmp_bucket", tmp_url)
-        bucket_name, blob_name = file_handler.parse_gcs_url(tmp_url)
+        tmp_bucket_url = bucket_handler.get_parquet_url("tmp", use_case, file_source, etl_info, running_date[:4], version)
+        bucket_name, blob_name = file_handler.parse_gcs_url(tmp_bucket_url)
         
         signed_url = gcs_client.generate_signed_url(bucket_name, blob_name)
         local_path = file_handler.download_file(signed_url, f"{use_case}/{file_source}/{etl_info}/output.parquet")
         
-        return local_path
+        return local_path, tmp_bucket_url
     except Exception as e:
+        print(e)
         return None

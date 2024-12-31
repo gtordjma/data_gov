@@ -8,6 +8,7 @@ from fastapi import UploadFile
 from ...shared.utils.gcp import insert_file_into_tmp_bucket
 from ...shared.DataGouvException import DataGouvException
 from ...shared.types.AssetTypes import AssetTypes
+from .FinanceVersions import FinanceVersions
 from .FinanceFileTypes import FinanceFileTypes
 from .KpisFunctions import kpis_function_tab
 from .Utils import copy_to_directories
@@ -66,7 +67,7 @@ def validate_file_schema(filepath: str, file_asset: AssetTypes, file_type: Finan
     validate_dataframe_with_schema(df, schema)
 
 
-def process_file(filename, running_date: str, filepath: str, file_type: FinanceFileTypes, file_asset: AssetTypes):
+def process_file(filename, running_date: str, filepath: str, file_type: FinanceFileTypes, file_asset: AssetTypes, version: FinanceVersions | None = None):
     """
     Processus complet de traitement d'un fichier valide.
     """
@@ -86,12 +87,12 @@ def process_file(filename, running_date: str, filepath: str, file_type: FinanceF
             )
             
         parquet_file_path = files[0]
-        insert_file_into_tmp_bucket(file_asset, "finance", filename, file_type.value, parquet_file_path)
+        tmp_bucket_url =  insert_file_into_tmp_bucket(file_asset, "finance", filename, file_type.value, parquet_file_path, version)
 
         if file_type in kpis_function_tab:
             try:
                 print("kpis_function_tab")
-                return kpis_function_tab[file_type](parquet_file_path), parquet_file_path
+                return kpis_function_tab[file_type](parquet_file_path), tmp_bucket_url
             except Exception as e:
                 raise DataGouvException(
                     title="Kpis Function Error",
